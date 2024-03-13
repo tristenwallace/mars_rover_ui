@@ -36,10 +36,11 @@ app.get('/apod', async (req, res) => {
 app.get('/rover/:name', async (req, res) => {
   try {
     const response = await fetch(
-      `https://api.nasa.gov/mars-photos/api/v1/rovers/${req.params.name}/latest_photos?api_key=${process.env.API_KEY}`);
-      if (!response.ok) {
-        return res.status(404).json({ error: 'Rover not found' });
-      }
+      `https://api.nasa.gov/mars-photos/api/v1/rovers/${req.params.name}/latest_photos?api_key=${process.env.API_KEY}`
+    );
+    if (!response.ok) {
+      return res.status(404).json({ error: 'Rover not found' });
+    }
     const images = await response.json();
     res.json(images);
   } catch (e) {
