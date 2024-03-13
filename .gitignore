@@ -135,7 +135,7 @@ dmypy.json
 cython_debug/
 
 # Notes
-notes.txt
+notes/
 
 #JS Modules
 node_modules/
