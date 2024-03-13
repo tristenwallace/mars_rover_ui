@@ -1,14 +1,15 @@
-let store = {
-  user: { name: 'Student' },
+let store = Immutable.Map({
+  user: Immutable.Map({ name: 'Tristen' }),
   apod: '',
-  rovers: ['Curiosity', 'Opportunity', 'Spirit'],
-};
+  rovers: Immutable.List(['Curiosity', 'Opportunity', 'Spirit']),
+  currentRover: 'none'
+});
 
 // add our markup to the page
 const root = document.getElementById('root');
 
 const updateStore = (store, newState) => {
-  store = Object.assign(store, newState);
+  store = store.merge(newState);
   render(root, store);
 };
 
@@ -18,12 +19,13 @@ const render = async (root, state) => {
 
 // create content
 const App = state => {
-  let { rovers, apod } = state;
+  let apod = state.get('apod');
+  let rovers = state.get('rovers');
 
   return `
         <header></header>
         <main>
-            ${Greeting(store.user.name)}
+            ${Greeting(store.get('user').get('name'))}
             <section>
                 <h3>Put things on the page!</h3>
                 <p>Here is an example section.</p>
@@ -93,7 +95,7 @@ const ImageOfTheDay = apod => {
 
 // Example API call
 const getImageOfTheDay = state => {
-  let { apod } = state;
+  let apod = state.get('apod');
 
   fetch(`http://localhost:8000/apod`)
     .then(res => res.json())
