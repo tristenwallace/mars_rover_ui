@@ -42,7 +42,7 @@ app.get('/rover/:name', async (req, res) => {
       return res.status(404).json({ error: 'Rover not found' });
     }
     const images = await response.json();
-    res.json(images);
+    res.send(images);
   } catch (e) {
     console.log(e);
     res.status(500).json({ error: 'Internal server error' });

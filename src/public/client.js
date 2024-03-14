@@ -8,22 +8,32 @@ let store = Immutable.Map({
 // add our markup to the page
 const root = document.getElementById('root');
 
-const updateStore = (store, newState) => {
-  store = store.merge(newState);
+const updateStore = (state, newState) => {
+  store = state.merge(newState);
   render(root, store);
 };
 
 // Content
 const render = async (root, state) => {
+  root.innerHTML = ''
   const apod = state.get('apod');
   const rovers = Array.from(state.get('rovers'));
 
-  const app = createApodSection(state.get('user').get('name'), apod);
-  const roverSelectorElement = RoverSelector(rovers, onSelect);
+  const ApodSection = createApodSection(state.get('user').get('name'), apod);
+  const roverSelectorElement = RoverSelector(rovers, getRoverData);
 
-  app.appendChild(roverSelectorElement) 
 
-  root.appendChild(app);
+  if (state.get('currentRover') != 'none') {
+    const roverGalleryElement = RoverImageGallery(store.get('currentRover'));
+
+    root.appendChild(roverGalleryElement);
+    root.appendChild(roverSelectorElement)
+  } else {
+    root.appendChild(ApodSection);
+    root.appendChild(roverSelectorElement)
+  }
+  
+  
 };
 
 
@@ -66,19 +76,44 @@ function createApodSection(user, apod) {
 }
 
 // Return Rover Selector
-function RoverSelector(rovers, onSelect) {
+function RoverSelector(rovers, getRoverData) {
   const selectElement = document.createElement('select');
-  selectElement.onchange = (event) => onSelect(event.target.value);
+  selectElement.onchange = (event) => getRoverData(event.target.value);
   
-  const optionElements = rovers.map(rover => `<option value="${rover}">${rover}</option>`).join('')
-  selectElement.innerHTML = optionElements;
+  // Placeholder option
+  const defaultOption = document.createElement('option');
+  defaultOption.textContent = 'Select a Rover';
+  defaultOption.value = '';
+  defaultOption.disabled = true;
+  defaultOption.selected = true;
+  selectElement.appendChild(defaultOption);
+
+  // Create options for other rovers
+  rovers.forEach(rover => {
+    const optionElement = document.createElement('option');
+    optionElement.value = rover;
+    optionElement.textContent = rover;
+    selectElement.appendChild(optionElement);
+  });
 
   return selectElement;  
 }
 
-function onSelect(roverName) {
-  console.log(`Selected rover: ${roverName}`); 
+function RoverImageGallery(roverData) {
+  const galleryElement = document.createElement('div');
+  galleryElement.className = 'rover-image-gallery'; // For styling
+
+  // Assuming roverData.photos is the array containing image data
+  roverData.latest_photos.forEach(photo => {
+    const imgElement = document.createElement('img');
+    imgElement.src = photo.img_src; // Use the img_src property from each photo object
+    imgElement.alt = `${photo.name} Rover Image`;
+    galleryElement.appendChild(imgElement);
+  });
+
+  return galleryElement;
 }
+
 
 // Return Image of The Day
 const ImageOfTheDay = apod => {
@@ -87,9 +122,9 @@ const ImageOfTheDay = apod => {
   // If image does not already exist, or it is not from today -- request it again
   const today = new Date();
   const photodate = new Date(apod.date);
-  console.log(photodate.getDate(), today.getDate());
+  console.log(`apod: ${photodate.getDate()} | today: ${today.getDate()}`);
 
-  console.log(photodate.getDate() === today.getDate());
+  console.log(`apod exist: ${photodate.getDate() === today.getDate()}`);
   if (!apod || apod.date === today.getDate()) {
     getImageOfTheDay(store);
   }
@@ -134,11 +169,30 @@ const ImageOfTheDay = apod => {
 
 // Get image from APOD API
 const getImageOfTheDay = state => {
-  let apod = state.get('apod');
+  let { apod } = state;
 
   fetch(`http://localhost:8000/apod`)
     .then(res => res.json())
     .then(apod => updateStore(store, { apod }));
-
-  return data;
 };
+
+// Get rover data from API
+const getRoverData = (roverName) =>  {
+
+  fetch(`/rover/${roverName}`)
+  .then(res => {
+    // Check if the response is OK (status in the range 200-299)
+    if (!res.ok) {
+      throw new Error(`Network response was not ok, status: ${res.status}`);
+    }
+    return res.json(); // Parse JSON body of the response
+  })
+  .then(data => {
+    data.latest_photos.forEach(photo => console.log(photo));
+    updateStore(store, { currentRover: data });
+  })
+  .catch(error => {
+    console.error('There has been a problem with your fetch operation:', error);
+    // Handle the error or update the store with error information
+  });
+}
