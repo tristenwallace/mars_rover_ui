@@ -1,86 +1,80 @@
+// Immutable.js is assumed to be imported
+
+// Initial state setup with Immutable.js Maps and Lists
 let store = Immutable.Map({
   user: Immutable.Map({ name: 'Tristen' }),
-  apod: '',
+  apod: null, // Initially null to indicate no data
   rovers: Immutable.List(['Curiosity', 'Opportunity', 'Spirit']),
-  currentRover: 'none'
+  currentRover: null, // Initially null to indicate no selection
 });
 
-// add our markup to the page
+// Reference to the root DOM element where content will be rendered
 const root = document.getElementById('root');
 
-const updateStore = (state, newState) => {
-  store = state.merge(newState);
-  render(root, store);
+// Function to update the global state and re-render the UI
+const updateStore = newState => {
+  store = store.merge(newState); // Merge new state with the existing state
+  render(root, store); // Re-render the UI with the updated state
 };
 
-// Content
-const render = async (root, state) => {
-  root.innerHTML = ''
-  const apod = state.get('apod');
-  const rovers = Array.from(state.get('rovers'));
+// Main render function to update the UI based on the current state
+const render = (root, state) => {
+  root.innerHTML = ''; // Clear the root element
 
-  const ApodSection = createApodSection(state.get('user').get('name'), apod);
-  const roverSelectorElement = RoverSelector(rovers, getRoverData);
+  // Components based on the state
+  const apodSection = createApodSection(
+    state.get('user').get('name'),
+    state.get('apod')
+  );
+  const roverSelectorElement = RoverSelector(
+    state.get('rovers').toArray(),
+    getRoverData
+  );
 
+  // Append APOD section and rover selector to the root
+  root.appendChild(apodSection);
+  root.appendChild(roverSelectorElement);
 
-  if (state.get('currentRover') != 'none') {
-    const roverGalleryElement = RoverImageGallery(store.get('currentRover'));
-
+  // Append rover image gallery if a rover is selected
+  if (state.get('currentRover')) {
+    const roverGalleryElement = RoverImageGallery(state.get('currentRover'));
     root.appendChild(roverGalleryElement);
-    root.appendChild(roverSelectorElement)
-  } else {
-    root.appendChild(ApodSection);
-    root.appendChild(roverSelectorElement)
   }
-  
-  
 };
 
-
-// listening for load event because page should load before any JS is called
+// Event listener to render the UI once the page loads
 window.addEventListener('load', () => {
-  render(root, store);
+  render(root, store); // Initial render
+  getImageOfTheDay(); // Fetch APOD data on load
 });
 
 // ------------------------------------------------------  COMPONENTS
 
-// Return Image of the Day Section
+// Function to create and return the APOD section element
 function createApodSection(user, apod) {
-  // Create the section element
   const section = document.createElement('section');
 
-  // Create and append the heading
   const heading = document.createElement('h3');
-  heading.textContent = 'Put things on the page!';
+  heading.textContent = 'Astronomy Picture of the Day';
   section.appendChild(heading);
 
-  // Create and append the first paragraph
-  const paragraph1 = document.createElement('p');
-  paragraph1.textContent = 'Here is an example section.';
-  section.appendChild(paragraph1);
+  // Append APOD content or loading text based on apod data availability
+  if (apod) {
+    section.appendChild(ImageOfTheDay(apod));
+  } else {
+    const loadingText = document.createElement('p');
+    loadingText.textContent = 'Loading APOD...';
+    section.appendChild(loadingText);
+  }
 
-  // Create and append the second paragraph
-  const paragraph2 = document.createElement('p');
-  paragraph2.innerHTML = `One of the most popular websites at NASA is the Astronomy Picture of the Day. In fact, this website is one of
-  the most popular websites across all federal agencies. It has the popular appeal of a Justin Bieber video.
-  This endpoint structures the APOD imagery and associated metadata so that it can be repurposed for other
-  applications. In addition, if the concept_tags parameter is set to True, then keywords derived from the image
-  explanation are returned. These keywords could be used as auto-generated hashtags for twitter or instagram feeds;
-  but generally help with discoverability of relevant imagery.`;
-  section.appendChild(paragraph2);
-
-  // Assuming ImageOfTheDay returns a DOM element
-  section.appendChild(ImageOfTheDay(apod));
-  
   return section;
 }
 
-// Return Rover Selector
-function RoverSelector(rovers, getRoverData) {
+// Function to create and return the rover selector dropdown element
+function RoverSelector(rovers, getRoverDataCallback) {
   const selectElement = document.createElement('select');
-  selectElement.onchange = (event) => getRoverData(event.target.value);
-  
-  // Placeholder option
+
+  // Default placeholder option
   const defaultOption = document.createElement('option');
   defaultOption.textContent = 'Select a Rover';
   defaultOption.value = '';
@@ -88,7 +82,7 @@ function RoverSelector(rovers, getRoverData) {
   defaultOption.selected = true;
   selectElement.appendChild(defaultOption);
 
-  // Create options for other rovers
+  // Add an option for each rover
   rovers.forEach(rover => {
     const optionElement = document.createElement('option');
     optionElement.value = rover;
@@ -96,103 +90,80 @@ function RoverSelector(rovers, getRoverData) {
     selectElement.appendChild(optionElement);
   });
 
-  return selectElement;  
+  // Fetch rover data on selection change
+  selectElement.onchange = event => getRoverDataCallback(event.target.value);
+
+  return selectElement;
 }
 
+// Function to create and return the rover image gallery element
 function RoverImageGallery(roverData) {
   const galleryElement = document.createElement('div');
-  galleryElement.className = 'rover-image-gallery'; // For styling
+  galleryElement.className = 'rover-image-gallery';
 
-  // Assuming roverData.photos is the array containing image data
-  roverData.latest_photos.forEach(photo => {
-    const imgElement = document.createElement('img');
-    imgElement.src = photo.img_src; // Use the img_src property from each photo object
-    imgElement.alt = `${photo.name} Rover Image`;
-    galleryElement.appendChild(imgElement);
-  });
+  // Check for and append images from rover data
+  if (roverData && roverData.latest_photos) {
+    roverData.latest_photos.forEach(photo => {
+      const imgElement = document.createElement('img');
+      imgElement.src = photo.img_src;
+      imgElement.alt = `${photo.rover.name} Rover Image`;
+      galleryElement.appendChild(imgElement);
+    });
+  }
 
   return galleryElement;
 }
 
-
-// Return Image of The Day
+// Function to create and return the Image of the Day content
 const ImageOfTheDay = apod => {
-  const container = document.createElement('div'); // Container for all content
+  const container = document.createElement('div');
 
-  // If image does not already exist, or it is not from today -- request it again
-  const today = new Date();
-  const photodate = new Date(apod.date);
-  console.log(`apod: ${photodate.getDate()} | today: ${today.getDate()}`);
-
-  console.log(`apod exist: ${photodate.getDate() === today.getDate()}`);
-  if (!apod || apod.date === today.getDate()) {
-    getImageOfTheDay(store);
-  }
-
-  // check if the photo of the day is actually type video!
+  // Check for media type and append appropriate content
   if (apod.media_type === 'video') {
-    const videoParagraph = document.createElement('p');
     const videoLink = document.createElement('a');
     videoLink.href = apod.url;
     videoLink.textContent = "See today's featured video here";
-    videoParagraph.appendChild(videoLink);
-
-    const titleParagraph = document.createElement('p');
-    titleParagraph.textContent = apod.title;
-
-    const explanationParagraph = document.createElement('p');
-    explanationParagraph.textContent = apod.explanation;
-
-    container.appendChild(videoParagraph);
-    container.appendChild(titleParagraph);
-    container.appendChild(explanationParagraph);
+    container.appendChild(videoLink);
   } else {
     const image = document.createElement('img');
     image.src = apod.image.url;
     image.style.height = '350px';
     image.style.width = '100%';
-
-    const explanationParagraph = document.createElement('p');
-    explanationParagraph.textContent = apod.image.explanation;
-
     container.appendChild(image);
-    container.appendChild(explanationParagraph);
   }
 
+  // Append explanation paragraph
+  const explanationParagraph = document.createElement('p');
+  explanationParagraph.textContent = apod.explanation;
+  container.appendChild(explanationParagraph);
+
   return container;
-
-}
-
-
+};
 
 // ------------------------------------------------------  API CALLS
 
-// Get image from APOD API
-const getImageOfTheDay = state => {
-  let { apod } = state;
-
+// Function to fetch and update the store with APOD data
+const getImageOfTheDay = () => {
   fetch(`http://localhost:8000/apod`)
-    .then(res => res.json())
-    .then(apod => updateStore(store, { apod }));
+    .then(res => {
+      if (!res.ok) {
+        throw new Error(`HTTP error! status: ${res.status}`);
+      }
+      return res.json();
+    })
+    .then(data => updateStore({ apod: data }))
+    .catch(error => console.error('Error fetching APOD:', error));
 };
 
-// Get rover data from API
-const getRoverData = (roverName) =>  {
-
+// Function to fetch and update the store with selected rover data
+const getRoverData = roverName => {
   fetch(`/rover/${roverName}`)
-  .then(res => {
-    // Check if the response is OK (status in the range 200-299)
-    if (!res.ok) {
-      throw new Error(`Network response was not ok, status: ${res.status}`);
-    }
-    return res.json(); // Parse JSON body of the response
-  })
-  .then(data => {
-    data.latest_photos.forEach(photo => console.log(photo));
-    updateStore(store, { currentRover: data });
-  })
-  .catch(error => {
-    console.error('There has been a problem with your fetch operation:', error);
-    // Handle the error or update the store with error information
-  });
-}
+    .then(res => {
+      if (!res.ok) {
+        throw new Error(`Network response was not ok, status: ${res.status}`);
+      }
+      return res.json();
+    })
+    .then(data => updateStore({ currentRover: data }))
+    .catch(error => console.error('Problem fetching rover data:', error));
+};
