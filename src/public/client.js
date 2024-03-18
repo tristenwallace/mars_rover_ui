@@ -34,7 +34,7 @@ const render = (root, state) => {
     const roverInfoCard = RoverInfoCard(currentRover.latest_photos);
     contentHTML += roverInfoCard + roverGalleryHTML;
   } else {
-    contentHTML += apodSectionHTML + roverSelectCard;
+    contentHTML += roverSelectCard + apodSectionHTML;
   }
 
   root.innerHTML = `<div>${contentHTML}</div>`; // Wrap the content in a div and set as innerHTML of root
@@ -43,7 +43,6 @@ const render = (root, state) => {
   attachRoverSelectorListener();
   attachNavbarEventListeners(rovers);
 };
-
 
 
 // Event listener to render the UI once the page loads
