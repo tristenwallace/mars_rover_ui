@@ -21,31 +21,47 @@ footer {
 }
 
 .navbar {
-  background-color: #333;
-  color: white;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background-color: #faf3eb;
+  color: #333;
   padding: 10px 15px;
-  text-align: center;
 }
 
-.navbar .menu {
-  margin: 0;
-  padding: 0;
+.menu {
+  display: flex;
+  gap: 10px; /* Spacing between buttons */
 }
 
-.navbar .menu button {
-  background-color: #4CAF50;
+.menu button {
+  background-color: #333;
   border: none;
   color: white;
   padding: 10px 20px;
-  margin: 5px;
   cursor: pointer;
   transition: background-color 0.3s ease;
 }
 
-.navbar .menu button:hover {
-  background-color: #45a049;
+.menu button:hover {
+  background-color: #555;
 }
 
+.navbar-logo {
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+}
+
+.logo-icon {
+  height: 50px; /* Adjust based on your logo's size */
+  margin-right: 10px; /* Space between logo icon and title */
+}
+
+.website-title {
+  color: #333;
+  font-size: 24px; /* Adjust based on your preference */
+}
 
 /* -------------------  TABLET  --------------------- */
 @media (min-width: 768px) {

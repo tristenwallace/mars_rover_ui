@@ -21,7 +21,6 @@ const updateStore = newState => {
 const render = (root, state) => {
   const rovers = state.get('rovers').toArray();
   const apodSectionHTML = createApodSectionHTML(
-    state.get('user').get('name'),
     state.get('apod')
   );
   const roverSelectorHTML = RoverSelectorHTML(rovers);
@@ -68,11 +67,15 @@ const attachNavbarEventListeners = (rovers) => {
       roverButton.onclick = () => getRoverData(rover);
     }
   });
+
+  const navbar = document.querySelector('.navbar-logo');
+  navbar.onclick = () => clearRoverSelection();
 };
+
 
 // ------------------------------------------------------  COMPONENTS
 
-function createApodSectionHTML(user, apod) {
+function createApodSectionHTML(apod) {
   let apodContentHTML = 'Loading APOD...';
   if (apod) {
     apodContentHTML = ImageOfTheDayHTML(apod);
@@ -111,14 +114,23 @@ function RoverImageGalleryHTML(roverData) {
 }
 
 function Navbar(rovers) {
+  // Logo HTML
+  const logoHTML = `
+    <div class="navbar-logo" onclick="clearRoverSelection()">
+      <img src="https://static.thenounproject.com/png/547826-200.png" alt="Logo" class="logo-icon">
+      <span class="website-title">Mars Rovers</span>
+    </div>
+  `;
+
   // Generate buttons for each rover
   const roverButtonsHTML = rovers.map(rover => {
     return `<button id="${rover}-btn">${rover}</button>`;
   }).join('');
 
-  // Return the complete Navbar HTML
+  // Return the complete Navbar HTML with logo and menu
   return `
     <nav class="navbar">
+      ${logoHTML}
       <div class="menu">${roverButtonsHTML}</div>
     </nav>
   `;
@@ -140,6 +152,12 @@ const ImageOfTheDayHTML = apod => {
       </div>
     `;
   }
+};
+
+// ------------------------------------------------------  HANDLERS
+
+const clearRoverSelection = () => {
+  updateStore({ currentRover: null });
 };
 
 // ------------------------------------------------------  API CALLS
