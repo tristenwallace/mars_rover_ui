@@ -20,6 +20,7 @@ const updateStore = newState => {
 // Main render function to update the UI based on the current state
 const render = (root, state) => {
   const rovers = state.get('rovers').toArray();
+  let currentRover = state.get('currentRover');
   const apodSectionHTML = createApodSectionHTML(
     state.get('apod')
   );
@@ -28,9 +29,10 @@ const render = (root, state) => {
 
   let contentHTML = navbarHTML
 
-  if (state.get('currentRover')) {
-    const roverGalleryHTML = RoverImageGalleryHTML(state.get('currentRover'));
-    contentHTML += roverGalleryHTML;
+  if (currentRover) {
+    const roverGalleryHTML = RoverImageGalleryHTML(currentRover.latest_photos);
+    const roverInfoCard = RoverInfoCard(currentRover.latest_photos);
+    contentHTML += roverInfoCard + roverGalleryHTML;
   } else {
     contentHTML += apodSectionHTML + roverSelectorHTML;
   }
@@ -103,7 +105,7 @@ function RoverSelectorHTML(rovers) {
 }
 
 function RoverImageGalleryHTML(roverData) {
-  const imagesHTML = roverData.latest_photos
+  const imagesHTML = roverData
     .map(
       photo =>
         `<img src="${photo.img_src}" alt="${photo.rover.name} Rover Image" style="height: 350px; width: 100%;">`
@@ -133,6 +135,26 @@ function Navbar(rovers) {
       ${logoHTML}
       <div class="menu">${roverButtonsHTML}</div>
     </nav>
+  `;
+}
+
+function RoverInfoCard(roverData) {
+  // Destructure the necessary info from the roverData object
+  const {name: roverName, 
+        landing_date: landingDate, 
+        launch_date: launchDate,
+        status: status,
+        max_date: maxDate } = roverData[0].rover;
+
+  // Generate the HTML for the card
+  return `
+    <div class="rover-info-card">
+      <h2>${roverName} Information</h2>
+      <p><strong>Launch Date:</strong> ${launchDate}</p>
+      <p><strong>Landing Date:</strong> ${landingDate}</p>
+      <p><strong>Status:</strong> ${status}</p>
+      <p><strong>Date of Most Recent Photos:</strong> ${maxDate}</p>
+    </div>
   `;
 }
 

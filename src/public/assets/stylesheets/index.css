@@ -63,6 +63,24 @@ footer {
   font-size: 24px; /* Adjust based on your preference */
 }
 
+.rover-info-card {
+  background-color: #f2f2f2;
+  border: 1px solid #ddd;
+  padding: 20px;
+  margin-top: 20px;
+  border-radius: 5px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.rover-info-card h2 {
+  color: #333;
+}
+
+.rover-info-card p {
+  margin: 10px 0;
+  color: #666;
+}
+
 /* -------------------  TABLET  --------------------- */
 @media (min-width: 768px) {
   /* use mobile */
