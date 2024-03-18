@@ -19,125 +19,95 @@ const updateStore = newState => {
 
 // Main render function to update the UI based on the current state
 const render = (root, state) => {
-  root.innerHTML = ''; // Clear the root element
-
-  // Components based on the state
-  const apodSection = createApodSection(
+  const apodSectionHTML = createApodSectionHTML(
     state.get('user').get('name'),
     state.get('apod')
   );
-  const roverSelectorElement = RoverSelector(
-    state.get('rovers').toArray(),
-    getRoverData
-  );
+  const roverSelectorHTML = RoverSelectorHTML(state.get('rovers').toArray());
 
-  // Append APOD section and rover selector to the root
-  root.appendChild(apodSection);
-  root.appendChild(roverSelectorElement);
+  let contentHTML = apodSectionHTML + roverSelectorHTML;
 
-  // Append rover image gallery if a rover is selected
   if (state.get('currentRover')) {
-    const roverGalleryElement = RoverImageGallery(state.get('currentRover'));
-    root.appendChild(roverGalleryElement);
+    const roverGalleryHTML = RoverImageGalleryHTML(state.get('currentRover'));
+    contentHTML = roverSelectorHTML + roverGalleryHTML;
+  }
+
+  root.innerHTML = `<div>${contentHTML}</div>`; // Wrap the content in a div and set as innerHTML of root
+
+  // After updating the innerHTML, the DOM elements are re-created. Attach the event listener.
+  attachRoverSelectorListener();
+};
+
+// Function to attach the onchange event listener to the rover selector
+const attachRoverSelectorListener = () => {
+  const roverSelector = document.getElementById('roverSelector');
+  if (roverSelector) {
+    roverSelector.onchange = event => getRoverData(event.target.value);
   }
 };
 
 // Event listener to render the UI once the page loads
 window.addEventListener('load', () => {
-  render(root, store); // Initial render
   getImageOfTheDay(); // Fetch APOD data on load
+  render(root, store); // Initial render
 });
 
 // ------------------------------------------------------  COMPONENTS
 
-// Function to create and return the APOD section element
-function createApodSection(user, apod) {
-  const section = document.createElement('section');
-
-  const heading = document.createElement('h3');
-  heading.textContent = 'Astronomy Picture of the Day';
-  section.appendChild(heading);
-
-  // Append APOD content or loading text based on apod data availability
+function createApodSectionHTML(user, apod) {
+  let apodContentHTML = 'Loading APOD...';
   if (apod) {
-    section.appendChild(ImageOfTheDay(apod));
-  } else {
-    const loadingText = document.createElement('p');
-    loadingText.textContent = 'Loading APOD...';
-    section.appendChild(loadingText);
+    apodContentHTML = ImageOfTheDayHTML(apod);
   }
 
-  return section;
+  return `
+    <section>
+      <h3>Astronomy Picture of the Day</h3>
+      ${apodContentHTML}
+    </section>
+  `;
 }
 
-// Function to create and return the rover selector dropdown element
-function RoverSelector(rovers, getRoverDataCallback) {
-  const selectElement = document.createElement('select');
+function RoverSelectorHTML(rovers) {
+  const optionsHTML = rovers
+    .map(rover => `<option value="${rover}">${rover}</option>`)
+    .join('');
 
-  // Default placeholder option
-  const defaultOption = document.createElement('option');
-  defaultOption.textContent = 'Select a Rover';
-  defaultOption.value = '';
-  defaultOption.disabled = true;
-  defaultOption.selected = true;
-  selectElement.appendChild(defaultOption);
-
-  // Add an option for each rover
-  rovers.forEach(rover => {
-    const optionElement = document.createElement('option');
-    optionElement.value = rover;
-    optionElement.textContent = rover;
-    selectElement.appendChild(optionElement);
-  });
-
-  // Fetch rover data on selection change
-  selectElement.onchange = event => getRoverDataCallback(event.target.value);
-
-  return selectElement;
+  return `
+    <select id="roverSelector">
+      <option value="" disabled selected>Select a Rover</option>
+      ${optionsHTML}
+    </select>
+  `;
 }
 
-// Function to create and return the rover image gallery element
-function RoverImageGallery(roverData) {
-  const galleryElement = document.createElement('div');
-  galleryElement.className = 'rover-image-gallery';
+function RoverImageGalleryHTML(roverData) {
+  const imagesHTML = roverData.latest_photos
+    .map(
+      photo =>
+        `<img src="${photo.img_src}" alt="${photo.rover.name} Rover Image" style="height: 350px; width: 100%;">`
+    )
+    .join('');
 
-  // Check for and append images from rover data
-  if (roverData && roverData.latest_photos) {
-    roverData.latest_photos.forEach(photo => {
-      const imgElement = document.createElement('img');
-      imgElement.src = photo.img_src;
-      imgElement.alt = `${photo.rover.name} Rover Image`;
-      galleryElement.appendChild(imgElement);
-    });
-  }
-
-  return galleryElement;
+  return `<div class="rover-image-gallery">${imagesHTML}</div>`;
 }
 
-// Function to create and return the Image of the Day content
-const ImageOfTheDay = apod => {
-  const container = document.createElement('div');
-
-  // Check for media type and append appropriate content
+const ImageOfTheDayHTML = apod => {
   if (apod.media_type === 'video') {
-    const videoLink = document.createElement('a');
-    videoLink.href = apod.url;
-    videoLink.textContent = "See today's featured video here";
-    container.appendChild(videoLink);
+    return `
+      <div>
+        <a href="${apod.url}">See today's featured video here</a>
+      </div>
+    `;
   } else {
-    const image = document.createElement('img');
-    image.src = apod.image.url;
-    image.style.height = '350px';
-    image.style.width = '100%';
-    container.appendChild(image);
+    return `
+      <div>
+        <img src="${apod.image.url}" alt="Astronomy Picture of the Day" style="height: 350px; width: 100%;">
+        <h4>${apod.image.title}</h4>
+        <p>${apod.image.explanation}</p>
+      </div>
+    `;
   }
-
-  // Append explanation paragraph
-  const explanationParagraph = document.createElement('p');
-  explanationParagraph.textContent = apod.explanation;
-  container.appendChild(explanationParagraph);
-
-  return container;
 };
 
 // ------------------------------------------------------  API CALLS
