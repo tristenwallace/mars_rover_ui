@@ -1,105 +1,221 @@
+// Immutable.js is assumed to be imported
+
+// Initial state setup with Immutable.js Maps and Lists
 let store = Immutable.Map({
   user: Immutable.Map({ name: 'Tristen' }),
-  apod: '',
+  apod: null, // Initially null to indicate no data
   rovers: Immutable.List(['Curiosity', 'Opportunity', 'Spirit']),
-  currentRover: 'none'
+  currentRover: null, // Initially null to indicate no selection
 });
 
-// add our markup to the page
+// Reference to the root DOM element where content will be rendered
 const root = document.getElementById('root');
 
-const updateStore = (store, newState) => {
-  store = store.merge(newState);
-  render(root, store);
+// Function to update the global state and re-render the UI
+const updateStore = newState => {
+  store = store.merge(newState); // Merge new state with the existing state
+  render(root, store); // Re-render the UI with the updated state
 };
 
-const render = async (root, state) => {
-  root.innerHTML = App(state);
+// Main render function to update the UI based on the current state
+const render = (root, state) => {
+  const rovers = state.get('rovers').toArray();
+  let currentRover = state.get('currentRover');
+  const apodSectionHTML = createApodSectionHTML(
+    state.get('apod')
+  );
+  const roverSelectCard = CreateSelectionCard(rovers);
+  const navbarHTML = Navbar(rovers);
+
+  let contentHTML = navbarHTML
+
+  if (currentRover) {
+    const roverGalleryHTML = RoverImageGalleryHTML(currentRover.latest_photos);
+    const roverInfoCard = RoverInfoCard(currentRover.latest_photos);
+    contentHTML += roverInfoCard + roverGalleryHTML;
+  } else {
+    contentHTML += roverSelectCard + apodSectionHTML;
+  }
+
+  root.innerHTML = `<div>${contentHTML}</div>`; // Wrap the content in a div and set as innerHTML of root
+
+  // After updating the innerHTML, the DOM elements are re-created. Attach the event listener.
+  attachRoverSelectorListener();
+  attachNavbarEventListeners(rovers);
 };
 
-// create content
-const App = state => {
-  let apod = state.get('apod');
-  let rovers = state.get('rovers');
 
-  return `
-        <header></header>
-        <main>
-            ${Greeting(store.get('user').get('name'))}
-            <section>
-                <h3>Put things on the page!</h3>
-                <p>Here is an example section.</p>
-                <p>
-                    One of the most popular websites at NASA is the Astronomy Picture of the Day. In fact, this website is one of
-                    the most popular websites across all federal agencies. It has the popular appeal of a Justin Bieber video.
-                    This endpoint structures the APOD imagery and associated metadata so that it can be repurposed for other
-                    applications. In addition, if the concept_tags parameter is set to True, then keywords derived from the image
-                    explanation are returned. These keywords could be used as auto-generated hashtags for twitter or instagram feeds;
-                    but generally help with discoverability of relevant imagery.
-                </p>
-                ${ImageOfTheDay(apod)}
-            </section>
-        </main>
-        <footer></footer>
-    `;
-};
-
-// listening for load event because page should load before any JS is called
+// Event listener to render the UI once the page loads
 window.addEventListener('load', () => {
-  render(root, store);
+  getImageOfTheDay(); // Fetch APOD data on load
+  render(root, store); // Initial render
 });
+
+// ------------------------------------------------------  LISTENERS
+
+// Function to attach the onchange event listener to the rover selector
+const attachRoverSelectorListener = () => {
+  const roverSelector = document.getElementById('roverSelector');
+  if (roverSelector) {
+    roverSelector.onchange = event => getRoverData(event.target.value);
+  }
+};
+
+const attachNavbarEventListeners = (rovers) => {
+  rovers.forEach(rover => {
+    const roverButton = document.getElementById(`${rover}-btn`);
+    if (roverButton) {
+      roverButton.onclick = () => getRoverData(rover);
+    }
+  });
+
+  const navbar = document.querySelector('.navbar-logo');
+  navbar.onclick = () => clearRoverSelection();
+};
+
 
 // ------------------------------------------------------  COMPONENTS
 
-// Pure function that renders conditional information -- THIS IS JUST AN EXAMPLE, you can delete it.
-const Greeting = name => {
-  if (name) {
-    return `
-            <h1>Welcome, ${name}!</h1>
-        `;
+function createApodSectionHTML(apod) {
+  let apodContentHTML = 'Loading APOD...';
+  if (apod) {
+    apodContentHTML = ImageOfTheDayHTML(apod);
   }
 
   return `
-        <h1>Hello!</h1>
-    `;
-};
+    <section class="apod-section">
+      <h3>Astronomy Picture of the Day</h3>
+      ${apodContentHTML}
+    </section>
+  `;
+}
 
-// Example of a pure function that renders infomation requested from the backend
-const ImageOfTheDay = apod => {
-  // If image does not already exist, or it is not from today -- request it again
-  const today = new Date();
-  const photodate = new Date(apod.date);
-  console.log(photodate.getDate(), today.getDate());
+function RoverSelectorHTML(rovers) {
+  const optionsHTML = rovers
+    .map(rover => `<option value="${rover}">${rover}</option>`)
+    .join('');
 
-  console.log(photodate.getDate() === today.getDate());
-  if (!apod || apod.date === today.getDate()) {
-    getImageOfTheDay(store);
-  }
+  return `
+    <select id="roverSelector">
+      <option value="" disabled selected>Select a Rover</option>
+      ${optionsHTML}
+    </select>
+  `;
+}
 
-  // check if the photo of the day is actually type video!
+function CreateSelectionCard(rovers) {
+  const selectDropdownHTML = RoverSelectorHTML(rovers); // Generate the select dropdown HTML
+
+  return `
+    <div class="rover-selection-card">
+      <h4>Select a Mars Rover</h4>
+      <p>To see the latest images from Mars, please select a rover using the dropdown below.</p>
+      ${selectDropdownHTML}
+    </div>
+  `;
+}
+
+function RoverImageGalleryHTML(roverData) {
+  const imagesHTML = roverData
+    .map(photo => `<img src="${photo.img_src}" alt="${photo.rover.name} Rover Image" class="gallery-image">`)
+    .join('');
+
+  return `<div class="rover-image-gallery">${imagesHTML}</div>`;
+}
+
+function Navbar(rovers) {
+  // Logo HTML
+  const logoHTML = `
+    <div class="navbar-logo" onclick="clearRoverSelection()">
+      <img src="https://static.thenounproject.com/png/547826-200.png" alt="Logo" class="logo-icon">
+      <span class="website-title">Mars Rovers</span>
+    </div>
+  `;
+
+  // Generate buttons for each rover
+  const roverButtonsHTML = rovers.map(rover => {
+    return `<button id="${rover}-btn">${rover}</button>`;
+  }).join('');
+
+  // Return the complete Navbar HTML with logo and menu
+  return `
+    <nav class="navbar">
+      <div class="navbar-container">
+        ${logoHTML}
+        <div class="menu">${roverButtonsHTML}</div>
+      </div>
+    </nav>
+  `;
+}
+
+function RoverInfoCard(roverData) {
+  // Destructure the necessary info from the roverData object
+  const {name: roverName, 
+        landing_date: landingDate, 
+        launch_date: launchDate,
+        status: status,
+        max_date: maxDate } = roverData[0].rover;
+
+  // Generate the HTML for the card
+  return `
+    <div class="rover-info-card">
+      <h2>${roverName} Information</h2>
+      <p><strong>Launch Date:</strong> ${launchDate}</p>
+      <p><strong>Landing Date:</strong> ${landingDate}</p>
+      <p><strong>Status:</strong> ${status}</p>
+      <p><strong>Date of Most Recent Photos:</strong> ${maxDate}</p>
+    </div>
+  `;
+}
+
+const ImageOfTheDayHTML = apod => {
   if (apod.media_type === 'video') {
     return `
-            <p>See today's featured video <a href="${apod.url}">here</a></p>
-            <p>${apod.title}</p>
-            <p>${apod.explanation}</p>
-        `;
+      <div>
+        <a href="${apod.url}">See today's featured video here</a>
+      </div>
+    `;
   } else {
     return `
-            <img src="${apod.image.url}" height="350px" width="100%" />
-            <p>${apod.image.explanation}</p>
-        `;
+      <div>
+        <img src="${apod.image.url}" alt="Astronomy Picture of the Day" style="height: 350px; width: 100%;">
+        <h4>${apod.image.title}</h4>
+        <p>${apod.image.explanation}</p>
+      </div>
+    `;
   }
+};
+
+// ------------------------------------------------------  HANDLERS
+
+const clearRoverSelection = () => {
+  updateStore({ currentRover: null });
 };
 
 // ------------------------------------------------------  API CALLS
 
-// Example API call
-const getImageOfTheDay = state => {
-  let apod = state.get('apod');
-
+// Function to fetch and update the store with APOD data
+const getImageOfTheDay = () => {
   fetch(`http://localhost:8000/apod`)
-    .then(res => res.json())
-    .then(apod => updateStore(store, { apod }));
+    .then(res => {
+      if (!res.ok) {
+        throw new Error(`HTTP error! status: ${res.status}`);
+      }
+      return res.json();
+    })
+    .then(data => updateStore({ apod: data }))
+    .catch(error => console.error('Error fetching APOD:', error));
+};
 
-  return data;
+// Function to fetch and update the store with selected rover data
+const getRoverData = roverName => {
+  fetch(`/rover/${roverName}`)
+    .then(res => {
+      if (!res.ok) {
+        throw new Error(`Network response was not ok, status: ${res.status}`);
+      }
+      return res.json();
+    })
+    .then(data => updateStore({ currentRover: data }))
+    .catch(error => console.error('Problem fetching rover data:', error));
 };
