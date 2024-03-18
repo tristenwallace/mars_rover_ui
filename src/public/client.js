@@ -24,7 +24,7 @@ const render = (root, state) => {
   const apodSectionHTML = createApodSectionHTML(
     state.get('apod')
   );
-  const roverSelectorHTML = RoverSelectorHTML(rovers);
+  const roverSelectCard = CreateSelectionCard(rovers);
   const navbarHTML = Navbar(rovers);
 
   let contentHTML = navbarHTML
@@ -34,7 +34,7 @@ const render = (root, state) => {
     const roverInfoCard = RoverInfoCard(currentRover.latest_photos);
     contentHTML += roverInfoCard + roverGalleryHTML;
   } else {
-    contentHTML += apodSectionHTML + roverSelectorHTML;
+    contentHTML += apodSectionHTML + roverSelectCard;
   }
 
   root.innerHTML = `<div>${contentHTML}</div>`; // Wrap the content in a div and set as innerHTML of root
@@ -84,7 +84,7 @@ function createApodSectionHTML(apod) {
   }
 
   return `
-    <section>
+    <section class="apod-section">
       <h3>Astronomy Picture of the Day</h3>
       ${apodContentHTML}
     </section>
@@ -101,6 +101,18 @@ function RoverSelectorHTML(rovers) {
       <option value="" disabled selected>Select a Rover</option>
       ${optionsHTML}
     </select>
+  `;
+}
+
+function CreateSelectionCard(rovers) {
+  const selectDropdownHTML = RoverSelectorHTML(rovers); // Generate the select dropdown HTML
+
+  return `
+    <div class="rover-selection-card">
+      <h4>Select a Mars Rover</h4>
+      <p>To see the latest images from Mars, please select a rover using the dropdown below.</p>
+      ${selectDropdownHTML}
+    </div>
   `;
 }
 
