@@ -19,24 +19,39 @@ const updateStore = newState => {
 
 // Main render function to update the UI based on the current state
 const render = (root, state) => {
+  const rovers = state.get('rovers').toArray();
   const apodSectionHTML = createApodSectionHTML(
     state.get('user').get('name'),
     state.get('apod')
   );
-  const roverSelectorHTML = RoverSelectorHTML(state.get('rovers').toArray());
+  const roverSelectorHTML = RoverSelectorHTML(rovers);
+  const navbarHTML = Navbar(rovers);
 
-  let contentHTML = apodSectionHTML + roverSelectorHTML;
+  let contentHTML = navbarHTML
 
   if (state.get('currentRover')) {
     const roverGalleryHTML = RoverImageGalleryHTML(state.get('currentRover'));
-    contentHTML = roverSelectorHTML + roverGalleryHTML;
+    contentHTML += roverGalleryHTML;
+  } else {
+    contentHTML += apodSectionHTML + roverSelectorHTML;
   }
 
   root.innerHTML = `<div>${contentHTML}</div>`; // Wrap the content in a div and set as innerHTML of root
 
   // After updating the innerHTML, the DOM elements are re-created. Attach the event listener.
   attachRoverSelectorListener();
+  attachNavbarEventListeners(rovers);
 };
+
+
+
+// Event listener to render the UI once the page loads
+window.addEventListener('load', () => {
+  getImageOfTheDay(); // Fetch APOD data on load
+  render(root, store); // Initial render
+});
+
+// ------------------------------------------------------  LISTENERS
 
 // Function to attach the onchange event listener to the rover selector
 const attachRoverSelectorListener = () => {
@@ -46,11 +61,14 @@ const attachRoverSelectorListener = () => {
   }
 };
 
-// Event listener to render the UI once the page loads
-window.addEventListener('load', () => {
-  getImageOfTheDay(); // Fetch APOD data on load
-  render(root, store); // Initial render
-});
+const attachNavbarEventListeners = (rovers) => {
+  rovers.forEach(rover => {
+    const roverButton = document.getElementById(`${rover}-btn`);
+    if (roverButton) {
+      roverButton.onclick = () => getRoverData(rover);
+    }
+  });
+};
 
 // ------------------------------------------------------  COMPONENTS
 
@@ -90,6 +108,20 @@ function RoverImageGalleryHTML(roverData) {
     .join('');
 
   return `<div class="rover-image-gallery">${imagesHTML}</div>`;
+}
+
+function Navbar(rovers) {
+  // Generate buttons for each rover
+  const roverButtonsHTML = rovers.map(rover => {
+    return `<button id="${rover}-btn">${rover}</button>`;
+  }).join('');
+
+  // Return the complete Navbar HTML
+  return `
+    <nav class="navbar">
+      <div class="menu">${roverButtonsHTML}</div>
+    </nav>
+  `;
 }
 
 const ImageOfTheDayHTML = apod => {
