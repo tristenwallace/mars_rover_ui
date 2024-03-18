@@ -106,10 +106,7 @@ function RoverSelectorHTML(rovers) {
 
 function RoverImageGalleryHTML(roverData) {
   const imagesHTML = roverData
-    .map(
-      photo =>
-        `<img src="${photo.img_src}" alt="${photo.rover.name} Rover Image" style="height: 350px; width: 100%;">`
-    )
+    .map(photo => `<img src="${photo.img_src}" alt="${photo.rover.name} Rover Image" class="gallery-image">`)
     .join('');
 
   return `<div class="rover-image-gallery">${imagesHTML}</div>`;
@@ -132,8 +129,10 @@ function Navbar(rovers) {
   // Return the complete Navbar HTML with logo and menu
   return `
     <nav class="navbar">
-      ${logoHTML}
-      <div class="menu">${roverButtonsHTML}</div>
+      <div class="navbar-container">
+        ${logoHTML}
+        <div class="menu">${roverButtonsHTML}</div>
+      </div>
     </nav>
   `;
 }
